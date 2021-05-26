@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 #!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 #====================================================================================
@@ -93,16 +87,3 @@ elif label == nouhin:
     st.error("検査成績表エラー")
 else:
     st.error("全エラー")
-
-
-# In[2]:
-
-
-print(cap_cam.isOpened())
-
-
-# In[ ]:
-
-
-
-
