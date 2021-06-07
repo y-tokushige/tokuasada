@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+# -*- coding: UTF-8 -*-
+#====================================================================================
+# ライブラリ
+#====================================================================================
+import streamlit as st
+from streamlit import caching
+st.set_page_config(page_title="張力比較",layout = "wide") #画面を広く使うための設定
+import pandas as pd
+import numpy as np
+
+#分析
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+#====================================================================================
+# 関数
+#====================================================================================
+def up_file(uploader_file):
+    excel1 = pd.read_excel(uploader_file, sheet_name=3)
+    excel2 = pd.read_excel(uploader_file, sheet_name=0)
+    return(excel1,excel2)
+    
+#====================================================================================
+# メイン
+#====================================================================================
+def main():
+    uploader_file = st.sidebar.file_uploader("データを選択")
+    excel1 = pd.read_excel(uploader_file, sheet_name=3)
+    
+    #シート4加工
+    excel1 = excel1.iloc[2:,] #上2行削除
+    excel1 = excel1.set_axis(["0","1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17"], axis='columns')
+    
+    #タテ
+    tate = excel1[["4","5"]]
+    tate = tate.set_axis(["試験力","ストローク"], axis='columns')
+    tate = tate[tate["試験力"] > 10]    
+    tate = tate.dropna(how='all')
+    tate = tate.fillna(0)
+    tate["伸び"] = tate["ストローク"]/200
+    tate = tate[["試験力","伸び"]]
+    tate = tate.sort_values(by='伸び', ascending=True)
+    tate = tate.reset_index(drop=True) 
+    
+    #ヨコ 
+    yoko = excel1[["13","14"]]
+    yoko = yoko.set_axis(["試験力","ストローク"], axis='columns')
+    yoko = yoko[yoko["試験力"] > 10]    
+    yoko = yoko.dropna(how='all')
+    yoko = yoko.fillna(0)    
+    yoko["伸び"] = yoko["ストローク"]/200
+    yoko = yoko[["試験力","伸び"]]
+    yoko = yoko.sort_values(by='伸び', ascending=True)
+    yoko = yoko.reset_index(drop=True) 
+    
+    #データフレーム表示
+    col1,col2 = st.beta_columns(2)
+    with col1:
+        st.write("タテ")
+        #マルチセレクトの準備
+        tate_len_list = tate.index.values
+        not_tate = st.multiselect("対象外にする行番号を入力して下さい",tate_len_list)
+        tate_df = tate.drop(not_tate)
+        tate_df.iat[len(tate_df)-1, 0] = 0
+        #tate_df['伸び'] = tate_df['伸び'].map('{:.2%}'.format)
+        
+
+        st.write(tate_df)
+    with col2:
+        st.write("ヨコ")
+        #マルチセレクトの準備
+        yoko_len_list = yoko.index.values
+        not_yoko = st.multiselect("対象外にする行番号を入力して下さい",yoko_len_list)
+        yoko_df = yoko.drop(not_yoko)
+        yoko_df.iat[len(yoko_df)-1, 0] = 0  
+        #yoko_df['伸び'] = yoko_df['伸び'].map('{:.2%}'.format)
+
+        st.write(yoko_df)                      
+
+    #グラフ作成
+   
+    fig = make_subplots(rows=1,cols=2,shared_xaxes=True,row_heights=[1],specs=[[{},{}]])
+    fig.add_trace(go.Scatter(x=tate_df.伸び,y=tate_df.試験力,x0=0,dx=5,name="精線",showlegend=True, mode='lines',line=dict(color='Blue', width=1),yaxis='y1',
+                            hoverlabel=dict(font=dict(family='Times New Roman', size=15)),hovertemplate='' + '伸び=%{x}<br>' + '試験力=%{y}<br>' + "<extra>""</extra>",),row=1,col=1)
+    fig.add_trace(go.Scatter(x=yoko_df.伸び,y=yoko_df.試験力,name="スプリント",showlegend=True, mode='lines',line=dict(color='Red', width=1),yaxis='y2',
+                            hoverlabel=dict(font=dict(family='Times New Roman', size=15)),hovertemplate='' + '伸び=%{x}<br>' + '試験力=%{y}<br>' + "<extra>""</extra>",),row=1,col=1)
+    fig.add_trace(go.Scatter(x=tate_df.伸び,y=tate_df.試験力,name="精線",showlegend=True, mode='lines',line=dict(color='Blue', width=1),
+                            hoverlabel=dict(font=dict(family='Times New Roman', size=15)),hovertemplate='' + '伸び=%{x}<br>' + '試験力=%{y}<br>' + "<extra>""</extra>",),row=1,col=2)
+
+    fig.update_layout(title_text="張力比較",
+                      xaxis_tickformat='.2%',
+                      xaxis=dict(dtick=0.05)
+                     )#xaxis=dict(title="タイトルX"),yaxis=dict(title="タイトルＹ",side='left'),yaxis2=dict(title="タイトル2軸",side='right',overlaying='y',showgrid=False)
+    # グラフをブラウザーに表示
+    col1,col2 = st.beta_columns((6,4))
+    with col1:
+        st.plotly_chart(fig, use_container_width=True)      
+    
+if __name__ == "__main__":
+    main()     
